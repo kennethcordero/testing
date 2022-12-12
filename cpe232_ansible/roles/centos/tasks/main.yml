@@ -1,0 +1,98 @@
+- name: Nagios dependecies and Libraries Installation
+  tags: dependecies, libraries
+  yum:
+    name:
+      - gcc
+      - glibc
+      - glibc-common
+      - perl
+      - httpd
+      - php
+      - wget
+      - gd
+      - gd-devel
+      - openssl-devel
+      - gcc
+      - glibc
+      - glibc-common
+      - make
+      - gettext
+      - automake
+      - autoconf
+      - wget
+      - openssl-devel
+      - net-snmp
+      - net-snmp-utils
+      - python2-pip
+    state: latest
+
+- name: Passlib python package Installation
+  pip:
+    name: passlib
+
+- name: Making Directory for downloaded files
+  file:
+    path: ~/nagios
+    state: directory
+
+- name: Nagios Download and Extract
+  unarchive:
+    src: https://github.com/NagiosEnterprises/nagioscore/archive/nagios-4.4.6.tar.gz
+    dest: ~/nagios
+    remote_src: yes
+    mode: 0777
+    owner: root
+    group: root
+
+- name: Create, Compile and install users and group
+  shell: |
+    cd ~/nagios/nagioscore-**
+    ./configure
+    make all
+    make install-groups-users
+    usermod -a -G nagios apache
+    make install
+    make install-daemoninit
+    make install-commandmode
+    make install-config
+    make install-webconf
+
+- name: Nagios Plugins Download and Extract
+  unarchive:
+    src: https://github.com/nagios-plugins/nagios-plugins/archive/release-2.3.3.tar.gz
+    dest: ~/nagios
+    remote_src: yes
+    mode: 0777
+    owner: root
+    group: root
+
+- name: Compilation and Installation
+  shell: |
+    cd ~/nagios/nagios-plugins*
+    ./tools/setup
+    ./configure
+    make
+    make install
+
+- name: Adding user to a password file and verifying permission are set
+  community.general.htpasswd:
+    path: /usr/local/nagios/etc/htpasswd.users
+    name: cordero
+    password: lastking23
+
+- name: Verifying the nagios and httpd is starting and enabled
+  service:
+    name: nagios
+    state: restarted
+    enabled: true
+
+- name: Verifying the nagios and httpd is starting and enabled
+  service:
+    name: httpd
+    state: restarted
+    enabled: true
+
+- name: Banner
+  debug:
+    msg: "Ansible Managed node by Cordero"
+  when: ansible_distribution == "CentOS"
